@@ -115,9 +115,20 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Then, find the event in the list of company events
+      // ثم، ابحث عن الحدث في قائمة أحداث الشركة
+      interface EventData {
+        id: string;
+        name: string;
+        image: string | null;
+        description: string;
+        date: string;
+        status?: string;
+        companyStatus?: string;
+        registrations: number;
+      }
+
       const matchingEvent = eventsData.events.find(
-        (event: any) => event.id.trim().toLowerCase() === eventId.trim().toLowerCase()
+        (event: EventData) => event.id.trim().toLowerCase() === eventId.trim().toLowerCase()
       );
 
       if (!matchingEvent) {
@@ -230,26 +241,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-// Helper function to find the exact event name in the sheet data
-function findExactEventName(data: string[][], eventId: string): string | null {
-  // Normalize the event ID for case-insensitive comparison
-  const normalizedEventId = eventId.trim().toLowerCase();
-  
-  for (let i = 0; i < data.length; i++) {
-    // Check if this row is a table name (has only one cell)
-    if (data[i] && data[i].length === 1 && data[i][0]) {
-      const tableName = data[i][0];
-      
-      // Check if this table name matches the event ID (case insensitive)
-      if (tableName.trim().toLowerCase() === normalizedEventId) {
-        console.log(`Found matching event: "${tableName}" for ID: "${eventId}"`);
-        return tableName; // Return the exact table name as it appears in the sheet
-      }
-    }
-  }
-  
-  console.error(`Event "${eventId}" not found in company sheet`);
-  return null;
 } 
