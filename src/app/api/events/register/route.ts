@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       companyName: rawCompanyName,
-      eventName,
+      eventName: rawEventName,
       name,
       phone,
       email,
@@ -18,8 +18,9 @@ export async function POST(request: NextRequest) {
       nationalId,
     } = body;
     
-    // Ensure company name is properly decoded and normalized
+    // Ensure company name and event name are properly decoded and normalized
     const companyName = decodeURIComponent(rawCompanyName).trim();
+    const eventName = decodeURIComponent(rawEventName).trim();
     
     console.log('Registration request received:', {
       companyName,
@@ -155,7 +156,10 @@ export async function POST(request: NextRequest) {
           email,
         });
         
-        await addToTable(companyName, eventName, [
+        // Get the exact event name from the table data
+        const exactEventName = tableData[0][0];
+        
+        await addToTable(companyName, exactEventName, [
           name,
           phone,
           email,
