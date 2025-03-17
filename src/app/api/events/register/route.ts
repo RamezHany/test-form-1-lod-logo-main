@@ -103,18 +103,35 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      // Find the exact event table name by searching the data first
-      const exactEventName = findExactEventName(sheetData, eventId);
-      
-      if (!exactEventName) {
-        console.error(`Event ${eventId} not found in company ${companyName}`);
+      // First, get a list of all events for this company
+      const allCompanyEvents = await fetch(`${request.headers.get('origin')}/api/events?company=${encodeURIComponent(companyName)}`);
+      const eventsData = await allCompanyEvents.json();
+
+      if (!eventsData.events || eventsData.events.length === 0) {
+        console.error(`No events found for company ${companyName}`);
         return NextResponse.json(
-          { error: 'Event not found' },
+          { error: 'No events found for this company' },
           { status: 404 }
         );
       }
-      
-      console.log(`Found exact event name: "${exactEventName}" for event ID: "${eventId}"`);
+
+      // Then, find the event in the list of company events
+      const matchingEvent = eventsData.events.find(
+        (event: any) => event.id.trim().toLowerCase() === eventId.trim().toLowerCase()
+      );
+
+      if (!matchingEvent) {
+        console.error(`Event ID ${eventId} not found in company ${companyName} events`);
+        return NextResponse.json(
+          { error: 'Event not found for this company' },
+          { status: 404 }
+        );
+      }
+
+      // Use the exact event name as stored in the database
+      const exactEventName = matchingEvent.id;
+
+      console.log(`Found exact event name: "${exactEventName}" for event ID: "${eventId}" in company: "${companyName}"`);
       
       // Check if the event exists and get its data
       try {
