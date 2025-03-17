@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
       nationalId,
     } = body;
     
-    // Ensure company name is properly decoded
-    const companyName = decodeURIComponent(rawCompanyName);
+    // Ensure company name is properly decoded and normalized
+    const companyName = decodeURIComponent(rawCompanyName).trim();
     
     console.log('Registration request received:', {
       companyName,
@@ -83,8 +83,8 @@ export async function POST(request: NextRequest) {
       const companiesData = await getSheetData('companies');
       const companies = companiesData.slice(1); // Skip header row
       
-      // Find the company
-      const company = companies.find((row) => row[1] === companyName);
+      // Find the company (case-insensitive match)
+      const company = companies.find((row) => row[1].trim().toLowerCase() === companyName.toLowerCase());
       
       if (company) {
         const status = company[5] || 'enabled';
@@ -94,6 +94,12 @@ export async function POST(request: NextRequest) {
             { status: 403 }
           );
         }
+      } else {
+        console.error(`Company ${companyName} not found in companies sheet`);
+        return NextResponse.json(
+          { error: 'Company not found' },
+          { status: 404 }
+        );
       }
       
       // Check if the event exists
