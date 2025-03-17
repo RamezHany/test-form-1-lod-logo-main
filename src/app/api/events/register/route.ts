@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       const companies = companiesData.slice(1); // Skip header row
       
       // Find the company (case-insensitive match)
-      const company = companies.find((row: any) => row[1].trim().toLowerCase() === companyName.toLowerCase());
+      const company = companies.find((row: string[]) => row[1]?.trim().toLowerCase() === companyName.toLowerCase());
       
       if (company) {
         const status = company[5] || 'enabled';
@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Helper function to find the exact event name in the sheet data
-function findExactEventName(data: any[], eventId: string): string | null {
+function findExactEventName(data: string[][], eventId: string): string | null {
   // Normalize the event ID for case-insensitive comparison
   const normalizedEventId = eventId.trim().toLowerCase();
   
