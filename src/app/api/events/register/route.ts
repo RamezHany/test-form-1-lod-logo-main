@@ -20,20 +20,20 @@ export async function POST(request: NextRequest) {
     
     // Ensure company name and event name are properly decoded and normalized
     const companyName = decodeURIComponent(rawCompanyName).trim();
-    const eventName = decodeURIComponent(rawEventName).trim();
+    const eventId = decodeURIComponent(rawEventName).trim();
     
     console.log('Registration request received:', {
       companyName,
-      eventName,
+      eventId,
       name,
       email,
     });
     
     // Validate required fields
-    if (!companyName || !eventName || !name || !phone || !email || !gender || !college || !status || !nationalId) {
+    if (!companyName || !eventId || !name || !phone || !email || !gender || !college || !status || !nationalId) {
       console.log('Validation failed - missing fields:', {
         companyName: !!companyName,
-        eventName: !!eventName,
+        eventId: !!eventId,
         name: !!name,
         phone: !!phone,
         email: !!email,
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       const companies = companiesData.slice(1); // Skip header row
       
       // Find the company (case-insensitive match)
-      const company = companies.find((row) => row[1].trim().toLowerCase() === companyName.toLowerCase());
+      const company = companies.find((row: any) => row[1].trim().toLowerCase() === companyName.toLowerCase());
       
       if (company) {
         const status = company[5] || 'enabled';
@@ -103,13 +103,26 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      // Check if the event exists
+      // Find the exact event table name by searching the data first
+      const exactEventName = findExactEventName(sheetData, eventId);
+      
+      if (!exactEventName) {
+        console.error(`Event ${eventId} not found in company ${companyName}`);
+        return NextResponse.json(
+          { error: 'Event not found' },
+          { status: 404 }
+        );
+      }
+      
+      console.log(`Found exact event name: "${exactEventName}" for event ID: "${eventId}"`);
+      
+      // Check if the event exists and get its data
       try {
-        console.log('Checking if event exists:', { companyName, eventName });
-        const tableData = await getTableData(companyName, eventName);
+        console.log('Checking if event exists:', { companyName, exactEventName });
+        const tableData = await getTableData(companyName, exactEventName);
         
         if (!tableData || tableData.length === 0) {
-          console.error(`Event ${eventName} not found in company ${companyName}`);
+          console.error(`Event ${exactEventName} not found in company ${companyName}`);
           return NextResponse.json(
             { error: 'Event not found' },
             { status: 404 }
@@ -151,13 +164,10 @@ export async function POST(request: NextRequest) {
         
         console.log('Adding registration to table:', {
           companyName,
-          eventName,
+          exactEventName,
           name,
           email,
         });
-        
-        // Get the exact event name from the table data
-        const exactEventName = tableData[0][0];
         
         await addToTable(companyName, exactEventName, [
           name,
@@ -203,4 +213,26 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to find the exact event name in the sheet data
+function findExactEventName(data: any[], eventId: string): string | null {
+  // Normalize the event ID for case-insensitive comparison
+  const normalizedEventId = eventId.trim().toLowerCase();
+  
+  for (let i = 0; i < data.length; i++) {
+    // Check if this row is a table name (has only one cell)
+    if (data[i] && data[i].length === 1 && data[i][0]) {
+      const tableName = data[i][0];
+      
+      // Check if this table name matches the event ID (case insensitive)
+      if (tableName.trim().toLowerCase() === normalizedEventId) {
+        console.log(`Found matching event: "${tableName}" for ID: "${eventId}"`);
+        return tableName; // Return the exact table name as it appears in the sheet
+      }
+    }
+  }
+  
+  console.error(`Event "${eventId}" not found in company sheet`);
+  return null;
 } 
